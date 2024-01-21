@@ -248,19 +248,6 @@ class LVGAN(CheckpointManager):
         generated_images = DataGenerator.denormalize(y).reshape((size,) + self.generate_shape)
         return generated_images[0] if size == 1 else generated_images
 
-    def generate_latent_space_2d(self, split_size=10):
-        assert split_size > 1
-        assert self.latent_dim == 2
-        space = np.linspace(-1.0, 1.0, split_size)
-        z = []
-        for i in range(split_size):
-            for j in range(split_size):
-                z.append([space[i], space[j]])
-        z = np.asarray(z).reshape((split_size * split_size, 2)).astype('float32')
-        y = np.asarray(self.graph_forward(self.gan_g, z))
-        generated_images = DataGenerator.denormalize(y).reshape((split_size * split_size,) + self.generate_shape)
-        return generated_images
-
     def show_interpolation(self, frame=100):
         space = np.linspace(-1.0, 1.0, frame)
         for val in space:
@@ -291,10 +278,7 @@ class LVGAN(CheckpointManager):
         else:
             if type(grid_size) is str:
                 grid_size = int(grid_size)
-        if self.latent_dim == 2:
-            generated_images = self.generate_latent_space_2d(split_size=grid_size)
-        else:
-            generated_images = self.generate_random_image(size=grid_size * grid_size)
+        generated_images = self.generate_random_image(size=grid_size * grid_size)
         generated_image_grid = None
         for i in range(grid_size):
             grid_row = None
