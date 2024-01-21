@@ -70,7 +70,7 @@ class TrainingConfig:
         self.training_view = training_view
 
 
-class LSGAN(CheckpointManager):
+class LVGAN(CheckpointManager):
     def __init__(self, config):
         super().__init__()
         assert config.generate_shape[0] % 32 == 0
