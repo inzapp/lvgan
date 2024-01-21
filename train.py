@@ -3,7 +3,7 @@ Authors : inzapp
 
 Github url : https://github.com/inzapp/lvgan
 
-Copyright (c) 2022 Inzapp
+Copyright (c) 2024 Inzapp
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
