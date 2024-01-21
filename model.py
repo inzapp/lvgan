@@ -41,8 +41,20 @@ class Model:
         self.ae = None
         self.ae_e = None
         self.ae_d = None
-        self.latent_rows = generate_shape[0] // 32
-        self.latent_cols = generate_shape[1] // 32
+        self.extra_strides = [64, 128, 256, 512]
+        self.stride = self.calc_stride(self.generate_shape)
+        self.latent_rows = generate_shape[0] // self.stride
+        self.latent_cols = generate_shape[1] // self.stride
+
+    def calc_stride(self, generate_shape):
+        stride = 32
+        min_size = min(generate_shape[:2])
+        for v in self.extra_strides:
+            if min_size >= v:
+                stride = v
+            else:
+                break
+        return stride
 
     def build(self, gan_g=None, gan_d=None, ae_e=None, ae_d=None):
         assert self.generate_shape[0] % 32 == 0 and self.generate_shape[1] % 32 == 0
@@ -61,14 +73,14 @@ class Model:
             self.gan_d = gan_d
 
         if ae_e is None:
-            ae_e_input, ae_e_output = self.build_ae_e(bn=False)
+            ae_e_input, ae_e_output = self.build_ae_e(bn=True)
             self.ae_e = tf.keras.models.Model(ae_e_input, ae_e_output)
         else:
             ae_e_input, ae_e_output = ae_e.input, ae_e.output
             self.ae_e = ae_e
 
         if ae_d is None:
-            ae_d_input, ae_d_output = self.build_ae_d(bn=False)
+            ae_d_input, ae_d_output = self.build_ae_d(bn=True)
             self.ae_d = tf.keras.models.Model(ae_d_input, ae_d_output)
         else:
             ae_d_input, ae_d_output = ae_d.input, ae_d.output
@@ -103,7 +115,12 @@ class Model:
         x = self.conv2d(x, 64, 5, 2, activation='leaky', bn=bn)
         x = self.conv2d(x, 128, 5, 2, activation='leaky', bn=bn)
         x = self.conv2d(x, 256, 5, 2, activation='leaky', bn=bn)
-        x = self.conv2d(x, 512, 5, 2, activation='leaky', bn=bn)
+        x = self.conv2d(x, 256, 5, 2, activation='leaky', bn=bn)
+        for extra_stride in self.extra_strides:
+            if self.stride >= extra_stride:
+                x = self.conv2d(x, 256, 5, 2, activation='leaky', bn=bn)
+            else:
+                break
         x = self.flatten(x)
         ae_e_output = self.dense(x, self.latent_dim, activation='linear')
         return ae_e_input, ae_e_output
@@ -111,9 +128,14 @@ class Model:
     def build_ae_d(self, bn):
         ae_d_input = tf.keras.layers.Input(shape=(self.latent_dim,))
         x = ae_d_input
-        x = self.dense(x, self.latent_rows * self.latent_cols * 512, activation='leaky', bn=bn)
-        x = self.reshape(x, (self.latent_rows, self.latent_cols, 512))
-        x = self.conv2d_transpose(x, 512, 4, 2, activation='leaky', bn=bn)
+        x = self.dense(x, self.latent_rows * self.latent_cols * 256, activation='leaky', bn=bn)
+        x = self.reshape(x, (self.latent_rows, self.latent_cols, 256))
+        for extra_stride in self.extra_strides:
+            if self.stride >= extra_stride:
+                x = self.conv2d_transpose(x, 256, 4, 2, activation='leaky', bn=bn)
+            else:
+                break
+        x = self.conv2d_transpose(x, 256, 4, 2, activation='leaky', bn=bn)
         x = self.conv2d_transpose(x, 256, 4, 2, activation='leaky', bn=bn)
         x = self.conv2d_transpose(x, 128, 4, 2, activation='leaky', bn=bn)
         x = self.conv2d_transpose(x, 64, 4, 2, activation='leaky', bn=bn)
