@@ -50,7 +50,7 @@ class Model:
         stride = 32
         min_size = min(generate_shape[:2])
         for v in self.extra_strides:
-            if min_size >= v:
+            if min_size >= v and min_size % v == 0:
                 stride = v
             else:
                 break
@@ -97,7 +97,7 @@ class Model:
         x = gan_g_input
         x = self.dense(x, 512, activation='leaky', bn=bn)
         x = self.dense(x, 512, activation='leaky', bn=bn)
-        gan_g_output = self.dense(x, self.latent_dim, activation='linear')
+        gan_g_output = self.batch_normalization(self.dense(x, self.latent_dim, activation='linear'))
         return gan_g_input, gan_g_output
 
     def build_gan_d(self, bn):
