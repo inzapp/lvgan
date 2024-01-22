@@ -59,7 +59,7 @@ class Model:
     def build(self, gan_g=None, gan_d=None, ae_e=None, ae_d=None):
         assert self.generate_shape[0] % 32 == 0 and self.generate_shape[1] % 32 == 0
         if gan_g is None:
-            gan_g_input, gan_g_output = self.build_gan_g(bn=False)
+            gan_g_input, gan_g_output = self.build_gan_g(bn=True)
             self.gan_g = tf.keras.models.Model(gan_g_input, gan_g_output)
         else:
             gan_g_input, gan_g_output = gan_g.input, gan_g.output
