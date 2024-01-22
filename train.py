@@ -42,17 +42,17 @@ if __name__ == '__main__':
         training_view=False)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--g-model', type=str, default='', help='pretrained generator model path')
-    parser.add_argument('--d-model', type=str, default='', help='pretrained discriminator model path')
-    parser.add_argument('--generate', action='store_true', help='generate image using pretrained generator model')
-    parser.add_argument('--grid', action='store_true', help='generate image grid using pretrained generator model')
+    parser.add_argument('--g', type=str, default='', help='pretrained latent vector generator model path')
+    parser.add_argument('--d', type=str, default='', help='pretrained decoder model path')
+    parser.add_argument('--generate', action='store_true', help='generate image using pretrained models')
+    parser.add_argument('--grid', action='store_true', help='generate image grid using pretrained models')
     parser.add_argument('--save-count', type=int, default=0, help='count for save images')
     parser.add_argument('--grid-size', type=str, default='auto', help='square grid size for grid image saving')
     args = parser.parse_args()
-    if args.g_model != '':
-        config.pretrained_g_model_path = args.g_model
-    if args.d_model != '':
-        config.pretrained_d_model_path = args.d_model
+    if args.g != '':
+        config.pretrained_gan_g_path = args.g
+    if args.d != '':
+        config.pretrained_ae_d_path = args.d
     lvgan = LVGAN(config=config)
     if args.generate:
         lvgan.generate(save_count=args.save_count, save_grid_image=args.grid, grid_size=args.grid_size)

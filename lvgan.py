@@ -53,8 +53,8 @@ class TrainingConfig:
                  iterations,
                  view_grid_size,
                  model_name,
-                 pretrained_g_model_path='',
-                 pretrained_d_model_path='',
+                 pretrained_gan_g_path='',
+                 pretrained_ae_d_path='',
                  training_view=False):
         self.train_image_path = train_image_path
         self.generate_shape = generate_shape
@@ -65,8 +65,8 @@ class TrainingConfig:
         self.iterations = iterations
         self.view_grid_size = view_grid_size
         self.model_name = model_name
-        self.pretrained_g_model_path = pretrained_g_model_path
-        self.pretrained_d_model_path = pretrained_d_model_path
+        self.pretrained_gan_g_path = pretrained_gan_g_path
+        self.pretrained_ae_d_path = pretrained_ae_d_path
         self.training_view = training_view
 
 
@@ -85,40 +85,40 @@ class LVGAN(CheckpointManager):
         self.iterations = config.iterations
         self.view_grid_size = config.view_grid_size
         self.model_name = config.model_name
-        self.pretrained_g_model_path = config.pretrained_g_model_path
-        self.pretrained_d_model_path = config.pretrained_d_model_path
+        self.pretrained_gan_g_path = config.pretrained_gan_g_path
+        self.pretrained_ae_d_path = config.pretrained_ae_d_path
         self.training_view = config.training_view
 
         self.set_model_name(self.model_name)
         self.live_view_previous_time = time()
         warnings.filterwarnings(action='ignore')
 
-        if self.pretrained_g_model_path == '' and self.pretrained_d_model_path == '':
+        if self.pretrained_gan_g_path == '' and self.pretrained_ae_d_path == '':
             self.model = Model(generate_shape=self.generate_shape, latent_dim=self.latent_dim)
             self.gan, self.gan_g, self.gan_d, self.ae, self.ae_e, self.ae_d = self.model.build()
         else:
-            pretrained_g_model = None
-            pretrained_d_model = None
-            if self.pretrained_g_model_path != '':
-                if os.path.exists(self.pretrained_g_model_path) and os.path.isfile(self.pretrained_g_model_path):
-                    pretrained_g_model = tf.keras.models.load_model(self.pretrained_g_model_path, compile=False)
-                    self.gan_g = pretrained_g_model
-                    self.latent_dim = self.gan_g.input_shape[1:]
-                    self.generate_shape = self.gan_g.output_shape[1:]
+            pretrained_gan_g = None
+            pretrained_ae_d = None
+            if self.pretrained_gan_g_path != '':
+                if os.path.exists(self.pretrained_gan_g_path) and os.path.isfile(self.pretrained_gan_g_path):
+                    pretrained_gan_g = tf.keras.models.load_model(self.pretrained_gan_g_path, compile=False)
+                    self.gan_g = pretrained_gan_g
+                    self.latent_dim = self.gan_g.output_shape[1:][0]
                 else:
-                    print(f'gan_g file not found : {self.pretrained_g_model_path}')
+                    print(f'gan_g file not found : {self.pretrained_gan_g_path}')
                     exit(0)
 
-            if self.pretrained_d_model_path != '':
-                if os.path.exists(self.pretrained_d_model_path) and os.path.isfile(self.pretrained_d_model_path):
-                    pretrained_d_model = tf.keras.models.load_model(self.pretrained_d_model_path, compile=False)
-                    self.gan_d = pretrained_d_model
+            if self.pretrained_ae_d_path != '':
+                if os.path.exists(self.pretrained_ae_d_path) and os.path.isfile(self.pretrained_ae_d_path):
+                    pretrained_ae_d = tf.keras.models.load_model(self.pretrained_ae_d_path, compile=False)
+                    self.ae_d = pretrained_ae_d
+                    self.generate_shape = self.ae_d.output_shape[1:]
                 else:
-                    print(f'gan_d file not found : {self.pretrained_d_model_path}')
+                    print(f'gan_d file not found : {self.pretrained_ae_d_path}')
                     exit(0)
 
             self.model = Model(generate_shape=self.generate_shape, latent_dim=self.latent_dim)
-            self.gan_g, self.gan_d, self.gan = self.model.build(gan_g=pretrained_g_model, gan_d=pretrained_d_model)
+            self.gan, self.gan_g, self.gan_d, self.ae, self.ae_e, self.ae_d = self.model.build(gan_g=pretrained_gan_g, ae_d=pretrained_ae_d)
 
         self.train_image_paths = self.init_image_paths(self.train_image_path)
         self.train_data_generator = DataGenerator(
