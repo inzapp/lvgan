@@ -35,12 +35,12 @@ class Model:
     def __init__(self, generate_shape, latent_dim):
         self.generate_shape = generate_shape
         self.latent_dim = latent_dim
-        self.gan = None
-        self.gan_g = None
-        self.gan_d = None
         self.ae = None
         self.ae_e = None
         self.ae_d = None
+        self.lvgan = None
+        self.lvgan_g = None
+        self.lvgan_d = None
         self.extra_strides = [64, 128, 256, 512]
         self.stride = self.calc_stride(self.generate_shape)
         self.latent_rows = generate_shape[0] // self.stride
@@ -56,21 +56,21 @@ class Model:
                 break
         return stride
 
-    def build(self, gan_g=None, gan_d=None, ae_e=None, ae_d=None):
+    def build(self, lvgan_g=None, lvgan_d=None, ae_e=None, ae_d=None):
         assert self.generate_shape[0] % 32 == 0 and self.generate_shape[1] % 32 == 0
-        if gan_g is None:
-            gan_g_input, gan_g_output = self.build_gan_g(bn=True)
-            self.gan_g = tf.keras.models.Model(gan_g_input, gan_g_output)
+        if lvgan_g is None:
+            lvgan_g_input, lvgan_g_output = self.build_lvgan_g(bn=True)
+            self.lvgan_g = tf.keras.models.Model(lvgan_g_input, lvgan_g_output)
         else:
-            gan_g_input, gan_g_output = gan_g.input, gan_g.output
-            self.gan_g = gan_g
+            lvgan_g_input, lvgan_g_output = lvgan_g.input, lvgan_g.output
+            self.lvgan_g = lvgan_g
 
-        if gan_d is None:
-            gan_d_input, gan_d_output = self.build_gan_d(bn=False)
-            self.gan_d = tf.keras.models.Model(gan_d_input, gan_d_output)
+        if lvgan_d is None:
+            lvgan_d_input, lvgan_d_output = self.build_lvgan_d(bn=False)
+            self.lvgan_d = tf.keras.models.Model(lvgan_d_input, lvgan_d_output)
         else:
-            gan_d_input, gan_d_output = gan_d.input, gan_d.output
-            self.gan_d = gan_d
+            lvgan_d_input, lvgan_d_output = lvgan_d.input, lvgan_d.output
+            self.lvgan_d = lvgan_d
 
         if ae_e is None:
             ae_e_input, ae_e_output = self.build_ae_e(bn=True)
@@ -86,27 +86,27 @@ class Model:
             ae_d_input, ae_d_output = ae_d.input, ae_d.output
             self.ae_d = ae_d
 
-        gan_output = self.gan_d(gan_g_output)
-        self.gan = tf.keras.models.Model(gan_g_input, gan_output)
+        lvgan_output = self.lvgan_d(lvgan_g_output)
+        self.lvgan = tf.keras.models.Model(lvgan_g_input, lvgan_output)
         ae_output = self.ae_d(ae_e_output)
         self.ae = tf.keras.models.Model(ae_e_input, ae_output)
-        return self.gan, self.gan_g, self.gan_d, self.ae, self.ae_e, self.ae_d
+        return self.ae, self.ae_e, self.ae_d, self.lvgan, self.lvgan_g, self.lvgan_d
 
-    def build_gan_g(self, bn):
-        gan_g_input = tf.keras.layers.Input(shape=(self.latent_dim,))
-        x = gan_g_input
+    def build_lvgan_g(self, bn):
+        lvgan_g_input = tf.keras.layers.Input(shape=(self.latent_dim,))
+        x = lvgan_g_input
         x = self.dense(x, 512, activation='leaky', bn=bn)
         x = self.dense(x, 512, activation='leaky', bn=bn)
-        gan_g_output = self.batch_normalization(self.dense(x, self.latent_dim, activation='linear'))
-        return gan_g_input, gan_g_output
+        lvgan_g_output = self.batch_normalization(self.dense(x, self.latent_dim, activation='linear'))
+        return lvgan_g_input, lvgan_g_output
 
-    def build_gan_d(self, bn):
-        gan_d_input = tf.keras.layers.Input(shape=(self.latent_dim,))
-        x = gan_d_input
+    def build_lvgan_d(self, bn):
+        lvgan_d_input = tf.keras.layers.Input(shape=(self.latent_dim,))
+        x = lvgan_d_input
         x = self.dense(x, 512, activation='leaky', bn=bn)
         x = self.dense(x, 512, activation='leaky', bn=bn)
-        gan_d_output = self.dense(x, 1, activation='linear')
-        return gan_d_input, gan_d_output
+        lvgan_d_output = self.dense(x, 1, activation='linear')
+        return lvgan_d_input, lvgan_d_output
 
     def build_ae_e(self, bn):
         ae_e_input = tf.keras.layers.Input(shape=self.generate_shape)
@@ -197,9 +197,9 @@ class Model:
         return tf.keras.layers.Flatten()(x)
 
     def summary(self):
-        self.gan_g.summary()
+        self.lvgan_g.summary()
         print()
-        self.gan_d.summary()
+        self.lvgan_d.summary()
         print()
         self.ae_e.summary()
         print()

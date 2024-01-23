@@ -95,17 +95,17 @@ class LVGAN(CheckpointManager):
 
         if self.pretrained_gan_g_path == '' and self.pretrained_ae_d_path == '':
             self.model = Model(generate_shape=self.generate_shape, latent_dim=self.latent_dim)
-            self.gan, self.gan_g, self.gan_d, self.ae, self.ae_e, self.ae_d = self.model.build()
+            self.ae, self.ae_e, self.ae_d, self.lvgan, self.lvgan_g, self.lvgan_d = self.model.build()
         else:
             pretrained_gan_g = None
             pretrained_ae_d = None
             if self.pretrained_gan_g_path != '':
                 if os.path.exists(self.pretrained_gan_g_path) and os.path.isfile(self.pretrained_gan_g_path):
                     pretrained_gan_g = tf.keras.models.load_model(self.pretrained_gan_g_path, compile=False)
-                    self.gan_g = pretrained_gan_g
-                    self.latent_dim = self.gan_g.output_shape[1:][0]
+                    self.lvgan_g = pretrained_gan_g
+                    self.latent_dim = self.lvgan_g.output_shape[1:][0]
                 else:
-                    print(f'gan_g file not found : {self.pretrained_gan_g_path}')
+                    print(f'lvgan_g file not found : {self.pretrained_gan_g_path}')
                     exit(0)
 
             if self.pretrained_ae_d_path != '':
@@ -114,16 +114,16 @@ class LVGAN(CheckpointManager):
                     self.ae_d = pretrained_ae_d
                     self.generate_shape = self.ae_d.output_shape[1:]
                 else:
-                    print(f'gan_d file not found : {self.pretrained_ae_d_path}')
+                    print(f'lvgan_d file not found : {self.pretrained_ae_d_path}')
                     exit(0)
 
             self.model = Model(generate_shape=self.generate_shape, latent_dim=self.latent_dim)
-            self.gan, self.gan_g, self.gan_d, self.ae, self.ae_e, self.ae_d = self.model.build(gan_g=pretrained_gan_g, ae_d=pretrained_ae_d)
+            self.ae, self.ae_e, self.ae_d, self.lvgan, self.lvgan_g, self.lvgan_d = self.model.build(lvgan_g=pretrained_gan_g, ae_d=pretrained_ae_d)
 
         self.train_image_paths = self.init_image_paths(self.train_image_path)
         self.train_data_generator = DataGenerator(
             ae_e=self.ae_e,
-            gan_g=self.gan_g,
+            lvgan_g=self.lvgan_g,
             image_paths=self.train_image_paths,
             generate_shape=self.generate_shape,
             batch_size=self.batch_size,
@@ -175,10 +175,10 @@ class LVGAN(CheckpointManager):
                 lr_scheduler_d.update(optimizer_d, iteration_count)
                 lr_scheduler_ae.update(optimizer_ae, iteration_count)
                 ae_loss = compute_gradient_ae(self.ae, optimizer_ae, ae_x, ae_x)
-                self.gan_d.trainable = True
-                d_loss = compute_gradient_d(self.gan_d, optimizer_d, dx, dy)
-                self.gan_d.trainable = False
-                g_loss = compute_gradient_g(self.gan, optimizer_g, gx, gy)
+                self.lvgan_d.trainable = True
+                d_loss = compute_gradient_d(self.lvgan_d, optimizer_d, dx, dy)
+                self.lvgan_d.trainable = False
+                g_loss = compute_gradient_g(self.lvgan, optimizer_g, gx, gy)
                 iteration_count += 1
                 progress_str = eta_calculator.update(iteration_count)
                 self.print_loss(progress_str, ae_loss, d_loss, g_loss)
@@ -186,7 +186,7 @@ class LVGAN(CheckpointManager):
                     self.training_view_function()
                 if iteration_count % self.save_interval == 0:
                     model_path_without_extention = f'{self.checkpoint_path}/model_{iteration_count}_iter'
-                    self.gan_g.save(f'{model_path_without_extention}_gan_g.h5', include_optimizer=False)
+                    self.lvgan_g.save(f'{model_path_without_extention}_lvgan_g.h5', include_optimizer=False)
                     self.ae_d.save(f'{model_path_without_extention}_ae_d.h5', include_optimizer=False)
                     generated_images = self.generate_image_grid(grid_size=21 if self.latent_dim == 2 else 10)
                     cv2.imwrite(f'{model_path_without_extention}.jpg', generated_images)
@@ -244,8 +244,8 @@ class LVGAN(CheckpointManager):
 
     def generate_random_image(self, size=1):
         z = np.asarray([DataGenerator.get_z_vector(size=self.latent_dim) for _ in range(size)])
-        generated_z = np.asarray(self.graph_forward(self.gan_g, z))
-        y = np.asarray(self.graph_forward(self.ae_d, generated_z))
+        latent_vector = np.asarray(self.graph_forward(self.lvgan_g, z))
+        y = np.asarray(self.graph_forward(self.ae_d, latent_vector))
         generated_images = DataGenerator.denormalize(y).reshape((size,) + self.generate_shape)
         return generated_images[0] if size == 1 else generated_images
 
@@ -253,7 +253,7 @@ class LVGAN(CheckpointManager):
         space = np.linspace(-1.0, 1.0, frame)
         for val in space:
             z = np.zeros(shape=(1, self.latent_dim), dtype=np.float32) + val
-            y = np.asarray(self.graph_forward(self.gan_g, z))[0]
+            y = np.asarray(self.graph_forward(self.lvgan_g, z))[0]
             y = DataGenerator.denormalize(y)
             generated_image = np.clip(np.asarray(y).reshape(self.generate_shape), 0.0, 255.0).astype('uint8')
             cv2.imshow('interpolation', generated_image)

@@ -26,14 +26,14 @@ from concurrent.futures.thread import ThreadPoolExecutor
 class DataGenerator:
     def __init__(self,
                  ae_e,
-                 gan_g,
+                 lvgan_g,
                  image_paths,
                  generate_shape,
                  batch_size,
                  latent_dim,
                  dtype='float32'):
         self.ae_e = ae_e
-        self.gan_g = gan_g
+        self.lvgan_g = lvgan_g
         self.image_paths = image_paths
         self.generate_shape = generate_shape
         self.batch_size = batch_size
@@ -63,7 +63,7 @@ class DataGenerator:
         real_dx = np.asarray(LVGAN.graph_forward(model=self.ae_e, x=half_ae_x)).reshape((self.half_batch_size, self.latent_dim)).astype(self.dtype)
         z = self.get_z_vector(size=self.batch_size * self.latent_dim).reshape((self.batch_size, self.latent_dim)).astype(self.dtype)
         half_z = z[:self.half_batch_size]
-        fake_dx = np.asarray(LVGAN.graph_forward(model=self.gan_g, x=half_z)).reshape((self.half_batch_size, self.latent_dim)).astype(self.dtype)
+        fake_dx = np.asarray(LVGAN.graph_forward(model=self.lvgan_g, x=half_z)).reshape((self.half_batch_size, self.latent_dim)).astype(self.dtype)
         real_dy = np.ones((self.half_batch_size, 1)).astype(self.dtype)
         fake_dy = np.zeros((self.half_batch_size, 1)).astype(self.dtype)
         dx = np.append(real_dx, fake_dx, axis=0)
