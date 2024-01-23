@@ -97,12 +97,12 @@ class LVGAN(CheckpointManager):
             self.model = Model(generate_shape=self.generate_shape, latent_dim=self.latent_dim)
             self.ae, self.ae_e, self.ae_d, self.lvgan, self.lvgan_g, self.lvgan_d = self.model.build()
         else:
-            pretrained_gan_g = None
+            pretrained_lvgan_g = None
             pretrained_ae_d = None
             if self.pretrained_gan_g_path != '':
                 if os.path.exists(self.pretrained_gan_g_path) and os.path.isfile(self.pretrained_gan_g_path):
-                    pretrained_gan_g = tf.keras.models.load_model(self.pretrained_gan_g_path, compile=False)
-                    self.lvgan_g = pretrained_gan_g
+                    pretrained_lvgan_g = tf.keras.models.load_model(self.pretrained_gan_g_path, compile=False)
+                    self.lvgan_g = pretrained_lvgan_g
                     self.latent_dim = self.lvgan_g.output_shape[1:][0]
                 else:
                     print(f'lvgan_g file not found : {self.pretrained_gan_g_path}')
@@ -118,7 +118,7 @@ class LVGAN(CheckpointManager):
                     exit(0)
 
             self.model = Model(generate_shape=self.generate_shape, latent_dim=self.latent_dim)
-            self.ae, self.ae_e, self.ae_d, self.lvgan, self.lvgan_g, self.lvgan_d = self.model.build(lvgan_g=pretrained_gan_g, ae_d=pretrained_ae_d)
+            self.ae, self.ae_e, self.ae_d, self.lvgan, self.lvgan_g, self.lvgan_d = self.model.build(lvgan_g=pretrained_lvgan_g, ae_d=pretrained_ae_d)
 
         self.train_image_paths = self.init_image_paths(self.train_image_path)
         self.train_data_generator = DataGenerator(
