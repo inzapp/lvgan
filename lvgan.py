@@ -218,10 +218,10 @@ class LVGAN(CheckpointManager):
         return model(x, training=False)
 
     def generate(self, save_count, save_grid_image, grid_size):
-        elements = [chr(i) for i in range(48, 58)] + [chr(i) for i in range(65, 91)] + [chr(i) for i in range(97, 123)]
         if save_count > 0:
             save_dir_path = 'generated_images'
             os.makedirs(save_dir_path, exist_ok=True)
+            elements = [chr(i) for i in range(48, 58)] + [chr(i) for i in range(65, 91)] + [chr(i) for i in range(97, 123)]
             for i in tqdm(range(save_count)):
                 random_stamp = ''.join(np.random.choice(elements, 12))
                 if save_grid_image:
